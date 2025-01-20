@@ -22,9 +22,16 @@ async function checkExists(checkPath) {
     await fsPromises.access(checkPath);
     await fsPromises.rm(checkPath, { recursive: true, force: true });
   } catch (err) {
+    if(path.extname(checkPath)){
+      await fsPromises.writeFile(checkPath, '')
+    } else if(!path.extname(checkPath)) {
       await fsPromises.mkdir(checkPath, {recursive: true});
-      // console.error(err);
+    } else {
+      console.error(err)
+    }
   }
 }
 
 copyFiles(sourceFolderPath, copyFolderPath)
+
+module.exports = checkExists;

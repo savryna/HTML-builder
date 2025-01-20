@@ -1,9 +1,7 @@
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
-const checkExists = require('../04-copy-directory/index.js')
 
 const stylesFolder = path.join(__dirname, 'styles');
-// const projectFolder = path.join(__dirname, 'project-dist')
 const projectFile = path.join(__dirname, 'project-dist', 'bundle.css')
 
 
@@ -12,9 +10,23 @@ async function mergeFiles(srcFolder, extname, destFile) {
   const dataSrcFiles = await Promise.all(srcFiles.map((file) => fsPromises.readFile(path.join(srcFolder, file))));
   
   await checkExists(destFile);
-  // const destFile = 
   for (const dataFile of dataSrcFiles) {
     await fsPromises.appendFile(destFile, dataFile)
   }
 }
 mergeFiles(stylesFolder, '.css', projectFile)
+
+async function checkExists(checkPath) {
+  try {
+    await fsPromises.access(checkPath);
+    await fsPromises.rm(checkPath, { recursive: true, force: true });
+  } catch (err) {
+    if(path.extname(checkPath)){
+      await fsPromises.writeFile(checkPath, '')
+    } else if(!path.extname(checkPath)) {
+      await fsPromises.mkdir(checkPath, {recursive: true});
+    } else {
+      console.error(err)
+    }
+  }
+}

@@ -34,4 +34,3 @@ async function checkExists(checkPath) {
 
 copyFiles(sourceFolderPath, copyFolderPath)
 
-module.exports = checkExists;

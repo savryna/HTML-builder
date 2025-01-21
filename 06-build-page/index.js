@@ -1,6 +1,9 @@
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
+const os = require('node:os');
+const { error } = require('node:console');
 
+const EOL = os.EOL
 const stylesFolder = path.join(__dirname, 'styles');
 const projectFolder = path.join(__dirname, 'project-dist');
 const projectFile = path.join(__dirname, 'project-dist', 'style.css');
@@ -59,28 +62,39 @@ async function checkExists(checkPath) {
   }
 }
 
-const srcHtmlPath = path.join(__dirname, 'template.html');
-const destHtmlFolderPath = path.join(__dirname, 'project-dist');
-const destHtmlFile = path.join(destHtmlFolderPath, 'index.html')
+const srcPath = path.join(__dirname, 'template.html');
+const destPath = path.resolve(__dirname, 'project-dist');
+const destFilePath =  path.resolve(destPath, 'index.html');
 
-const componentsPath = {
-    '{{header}}': path.join(__dirname, 'components', 'header.html'),
-    '{{footer}}': path.join(__dirname, 'components', 'footer.html'), 
-    '{{articles}}': path.join(__dirname, 'components', 'articles.html')
-}
 
-async function createHtmlFile(srcFile, destHtmlFile,  componentsPath) {
-  await fsPromises.copyFile(srcFile, destHtmlFile)
-  let dataCopyFile = await fsPromises.readFile(destHtmlFile, 'utf-8')
-
-  for (const [templateTag, sourceFilePath] of Object.entries(componentsPath)) {
-    const sourceContent = await fsPromises.readFile(sourceFilePath, 'utf-8');
-    dataCopyFile = dataCopyFile.replace(templateTag, sourceContent);
+async function createHtmlFile(srcHtmlPath, destHtmlPath, extension) {
+  try {
+    const componentsDir = path.resolve(__dirname, 'components');
+    const srcHtmlData = await fsPromises.readFile(srcHtmlPath, 'utf8');
+    const regExp = new RegExp(/{{.*?}}/, 'g');
+    const srcParts = srcHtmlData.split(regExp);
+    const componentsTags = srcHtmlData.match(regExp);
+  
+    const dataFromTag = await Promise.all(
+      componentsTags.map(async (componentName) => {
+        const srcComponentsPath = path.resolve(componentsDir, `${componentName.slice(2, -2)}${extension}`);
+        const replaceData = await fsPromises.readFile(srcComponentsPath, 'utf8');
+        return replaceData;
+      }),
+    );
+  
+    const fillHtml = srcParts.reduce((html, part, idx) => {
+      html.push(part)
+      html.push(dataFromTag[idx]);
+      return html
+    }, []).join(EOL)
+  
+    await fsPromises.writeFile(destHtmlPath, fillHtml);
+  } catch (err) {
+    console.error(err)
   }
-
-  await fsPromises.writeFile(destHtmlFile, dataCopyFile, 'utf-8');
 }
 
 mergeFiles(stylesFolder, '.css', projectFolder, projectFile)
   .then(() => copyFiles(assetsSrcFolder, assetsCopyFolder))
-  .then(() => createHtmlFile(srcHtmlPath, destHtmlFile, componentsPath))
+  .then(() => createHtmlFile(srcPath, destFilePath, '.html'))
